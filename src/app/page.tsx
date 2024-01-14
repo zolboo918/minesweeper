@@ -85,63 +85,64 @@ export default function Home() {
     colIndex: number,
     newArr: CellValueType[][]
   ) => {
+    let aroundBombCount = 0;
     // top
     if (
       checkCell(rowIndex - 1, colIndex) &&
       newArr[rowIndex - 1][colIndex].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
     //bottom
     if (
       checkCell(rowIndex + 1, colIndex) &&
       newArr[rowIndex + 1][colIndex].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
     //left
     if (
       checkCell(rowIndex, colIndex - 1) &&
       newArr[rowIndex][colIndex - 1].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
     //right
     if (
       checkCell(rowIndex, colIndex + 1) &&
       newArr[rowIndex][colIndex + 1].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
     // top left
     if (
       checkCell(rowIndex - 1, colIndex - 1) &&
       newArr[rowIndex - 1][colIndex - 1].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
     // top right
     if (
       checkCell(rowIndex - 1, colIndex + 1) &&
       newArr[rowIndex - 1][colIndex + 1].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
     //bottom left
     if (
       checkCell(rowIndex + 1, colIndex - 1) &&
       newArr[rowIndex + 1][colIndex - 1].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
     //bottom right
     if (
       checkCell(rowIndex + 1, colIndex + 1) &&
       newArr[rowIndex + 1][colIndex + 1].type === "bomb"
     ) {
-      newArr[rowIndex][colIndex].aroundBombCount++;
+      aroundBombCount++;
     }
-    return newArr;
+    return aroundBombCount;
   };
 
   const checkAround = (
@@ -151,6 +152,11 @@ export default function Home() {
     arr?: CellValueType[][]
   ) => {
     let newArr: CellValueType[][] = arr ? arr : [...array];
+    if (!fromRecursive && checkWin()) {
+      alert("You win! Congrats.");
+      reset();
+      return;
+    }
     if (newArr[rowIndex] && newArr[rowIndex][colIndex] && result != "0") {
       const value = newArr[rowIndex][colIndex];
 
@@ -168,19 +174,14 @@ export default function Home() {
         }
       }
 
-      if (value.type === "flag") {
+      if (value.type === "flag" || value.type === "opened") {
         return;
       }
 
       if (value.type === "empty") {
         newArr[rowIndex][colIndex].type = "opened";
-        if (!fromRecursive && checkWin()) {
-          alert("You win! Congrats.");
-          reset();
-          return;
-        }
-        newArr = countAroundBomb(rowIndex, colIndex, newArr);
-        if (newArr[rowIndex][colIndex].aroundBombCount === 0) {
+        value.aroundBombCount = countAroundBomb(rowIndex, colIndex, newArr);
+        if (value.aroundBombCount === 0) {
           // top
           if (checkCell(rowIndex - 1, colIndex)) {
             checkAround(rowIndex - 1, colIndex, true);
@@ -229,6 +230,11 @@ export default function Home() {
       array[rowIndex][colIndex].type !== "opened"
     ) {
       array[rowIndex][colIndex].type = "flag";
+      if (checkWin(array)) {
+        alert("You win! Congrats.");
+        reset();
+        return;
+      }
     }
     setArray([...array]);
   };
@@ -240,9 +246,10 @@ export default function Home() {
     BombCount = 0;
   };
 
-  const checkWin = () => {
+  const checkWin = (newArr?: CellValueType[][]) => {
     let openedCellCount = 0;
-    array.forEach((row: CellValueType[]) => {
+    const arr = newArr ? newArr : array;
+    arr.forEach((row: CellValueType[]) => {
       row.forEach((col: CellValueType) => {
         if (col.type === "opened") {
           openedCellCount++;
@@ -294,7 +301,7 @@ export default function Home() {
                         key={rowIndex + columnIndex}
                         className={`flex ${
                           column.type === "opened" ? "bg-green-200" : "bg-white"
-                        } text-gray-400 justify-center align-middle rounded hover:bg-green-200 text-center text-xl m-[1px] ${cellSize}`}
+                        } text-gray-400 justify-center align-middle rounded hover:bg-green-100 text-center text-xl m-[1px] ${cellSize}`}
                         onClick={() => checkAround(rowIndex, columnIndex)}
                         onContextMenu={(event: any) =>
                           setFlag(event, rowIndex, columnIndex)
