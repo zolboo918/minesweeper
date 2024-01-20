@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 type Level = "easy" | "medium" | "hard";
 
 type CellValueType = {
-  type: "empty" | "bomb" | "flag" | "opened";
+  type: "empty" | "bomb" | "opened";
   aroundBombCount: number;
+  flag: boolean;
 };
 
 const LevelRowColCount = {
@@ -39,6 +40,13 @@ export default function Home() {
       ? "h-[25px] w-[25px]"
       : "h-[20px] w-[20px]";
 
+  useEffect(() => {
+    if (checkWin()) {
+      alert("You win, congrats");
+      setStarted(false);
+    }
+  }, [array]);
+
   const chooseLevel = (selectedLevel: Level) => {
     setLevel(selectedLevel);
     SelectedLevel = selectedLevel;
@@ -54,6 +62,7 @@ export default function Home() {
         row.push({
           aroundBombCount: 0,
           type: "empty",
+          flag: false,
         });
       });
       newArray.push(row);
@@ -80,65 +89,61 @@ export default function Home() {
     return array[rowIndex] && array[rowIndex][colIndex];
   };
 
-  const countAroundBomb = (
-    rowIndex: number,
-    colIndex: number,
-    newArr: CellValueType[][]
-  ) => {
+  const countAroundBomb = (rowIndex: number, colIndex: number) => {
     let aroundBombCount = 0;
     // top
     if (
       checkCell(rowIndex - 1, colIndex) &&
-      newArr[rowIndex - 1][colIndex].type === "bomb"
+      array[rowIndex - 1][colIndex].type === "bomb"
     ) {
       aroundBombCount++;
     }
     //bottom
     if (
       checkCell(rowIndex + 1, colIndex) &&
-      newArr[rowIndex + 1][colIndex].type === "bomb"
+      array[rowIndex + 1][colIndex].type === "bomb"
     ) {
       aroundBombCount++;
     }
     //left
     if (
       checkCell(rowIndex, colIndex - 1) &&
-      newArr[rowIndex][colIndex - 1].type === "bomb"
+      array[rowIndex][colIndex - 1].type === "bomb"
     ) {
       aroundBombCount++;
     }
     //right
     if (
       checkCell(rowIndex, colIndex + 1) &&
-      newArr[rowIndex][colIndex + 1].type === "bomb"
+      array[rowIndex][colIndex + 1].type === "bomb"
     ) {
       aroundBombCount++;
     }
     // top left
     if (
       checkCell(rowIndex - 1, colIndex - 1) &&
-      newArr[rowIndex - 1][colIndex - 1].type === "bomb"
+      array[rowIndex - 1][colIndex - 1].type === "bomb"
     ) {
       aroundBombCount++;
     }
     // top right
     if (
       checkCell(rowIndex - 1, colIndex + 1) &&
-      newArr[rowIndex - 1][colIndex + 1].type === "bomb"
+      array[rowIndex - 1][colIndex + 1].type === "bomb"
     ) {
       aroundBombCount++;
     }
     //bottom left
     if (
       checkCell(rowIndex + 1, colIndex - 1) &&
-      newArr[rowIndex + 1][colIndex - 1].type === "bomb"
+      array[rowIndex + 1][colIndex - 1].type === "bomb"
     ) {
       aroundBombCount++;
     }
     //bottom right
     if (
       checkCell(rowIndex + 1, colIndex + 1) &&
-      newArr[rowIndex + 1][colIndex + 1].type === "bomb"
+      array[rowIndex + 1][colIndex + 1].type === "bomb"
     ) {
       aroundBombCount++;
     }
@@ -148,15 +153,9 @@ export default function Home() {
   const checkAround = (
     rowIndex: number,
     colIndex: number,
-    fromRecursive?: boolean,
-    arr?: CellValueType[][]
+    fromRecursive?: boolean
   ) => {
-    let newArr: CellValueType[][] = arr ? arr : [...array];
-    if (!fromRecursive && checkWin()) {
-      alert("You win! Congrats.");
-      reset();
-      return;
-    }
+    let newArr: CellValueType[][] = [...array];
     if (newArr[rowIndex] && newArr[rowIndex][colIndex] && result != "0") {
       const value = newArr[rowIndex][colIndex];
 
@@ -174,13 +173,16 @@ export default function Home() {
         }
       }
 
-      if (value.type === "flag" || value.type === "opened") {
+      if (value.flag || value.type === "opened") {
         return;
       }
 
       if (value.type === "empty") {
         newArr[rowIndex][colIndex].type = "opened";
-        value.aroundBombCount = countAroundBomb(rowIndex, colIndex, newArr);
+        newArr[rowIndex][colIndex].aroundBombCount = countAroundBomb(
+          rowIndex,
+          colIndex
+        );
         if (value.aroundBombCount === 0) {
           // top
           if (checkCell(rowIndex - 1, colIndex)) {
@@ -222,21 +224,11 @@ export default function Home() {
 
   const setFlag = (event: MouseEvent, rowIndex: number, colIndex: number) => {
     event.preventDefault();
-
-    if (array[rowIndex][colIndex].type == "flag") {
-      array[rowIndex][colIndex].type = "empty";
-    } else if (
-      array[rowIndex][colIndex].type !== "flag" &&
-      array[rowIndex][colIndex].type !== "opened"
-    ) {
-      array[rowIndex][colIndex].type = "flag";
-      if (checkWin(array)) {
-        alert("You win! Congrats.");
-        reset();
-        return;
-      }
+    if (array[rowIndex][colIndex].type !== "opened") {
+      let newArray = [...array];
+      newArray[rowIndex][colIndex].flag = !newArray[rowIndex][colIndex].flag;
+      setArray(newArray);
     }
-    setArray([...array]);
   };
 
   const reset = () => {
@@ -246,17 +238,22 @@ export default function Home() {
     BombCount = 0;
   };
 
-  const checkWin = (newArr?: CellValueType[][]) => {
-    let openedCellCount = 0;
-    const arr = newArr ? newArr : array;
-    arr.forEach((row: CellValueType[]) => {
-      row.forEach((col: CellValueType) => {
-        if (col.type === "opened") {
-          openedCellCount++;
+  const checkWin = () => {
+    for (let row = 0; row < LevelRowColCount[level]; row++) {
+      for (let col = 0; col < LevelRowColCount[level]; col++) {
+        if (array && array[row] && array[row][col]) {
+          if (
+            array[row][col].type !== "bomb" &&
+            array[row][col].type !== "opened"
+          ) {
+            return false;
+          }
+        } else {
+          return false;
         }
-      });
-    });
-    return openedCellCount === LevelRowColCount[SelectedLevel] ** 2 - BombCount;
+      }
+    }
+    return true;
   };
 
   return (
@@ -309,7 +306,7 @@ export default function Home() {
                       >
                         {column.aroundBombCount > 0 ? (
                           column.aroundBombCount
-                        ) : column.type === "flag" ? (
+                        ) : column.flag ? (
                           <Image
                             src={
                               "https://cdn-icons-png.flaticon.com/512/395/395841.png"
